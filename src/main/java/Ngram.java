@@ -7,10 +7,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Ngram {
-    private static Map<Key, Integer> truePositive = new HashMap<>();
-    private static Map<Key, Integer> falsePositive = new HashMap<>();
-    private static Map<Key, Integer> trueNegative = new HashMap<>();
-    private static Map<Key, Integer> falseNegative = new HashMap<>();
     private static List<String> enlishInput = new ArrayList<>(Arrays.asList("english1.txt", "english2.txt", "english3.txt", "english4.txt"));
     private static List<String> finnishInput = new ArrayList<>(Arrays.asList("finnish1.txt", "finnish2.txt"));
     private static List<String> germanInput = new ArrayList<>(Arrays.asList("german1.txt", "german2.txt", "german3.txt", "german4.txt"));
@@ -18,7 +14,7 @@ public class Ngram {
     private static List<String> polishInput = new ArrayList<>(Arrays.asList("polish1.txt", "polish2.txt", "polish3.txt"));
     private static List<String> spanishInput = new ArrayList<>(Arrays.asList("spanish1.txt", "spanish2.txt"));
 
-    public Ngram(List<String> texts, String language) {
+    Ngram(List<String> texts, String language) {
         for (int i = 2; i < 11; i++) {
             System.out.println("i = " + i);
             final int ngram = i;
@@ -33,36 +29,31 @@ public class Ngram {
 
             long count = texts.stream()
                     .map(text -> {
-                        String detectedLanguage = calcAndPrintResult(ngram, text, ngramCache);
+                        String detectedLanguage = detectLanguage(ngram, text, ngramCache);
                         boolean detectedCorretly = detectedLanguage.equals(language);
-                        Key expectedLanguageKey = new Key(ngram, language);
-                        Key detectedLanguageKey = new Key(ngram, detectedLanguage);
-                        if (detectedCorretly) {
-                            if (truePositive.containsKey(expectedLanguageKey)) {
-                                truePositive.put(expectedLanguageKey, truePositive.get(expectedLanguageKey) + 1);
-                            } else {
-                                truePositive.put(expectedLanguageKey, 1);
-                            }
-                        } else {
-                            if (falsePositive.containsKey(detectedLanguageKey)) {
-                                falsePositive.put(detectedLanguageKey, falsePositive.get(detectedLanguageKey) + 1);
-                            } else {
-                                falsePositive.put(detectedLanguageKey, 1);
-                            }
-                            if (falseNegative.containsKey(expectedLanguageKey)) {
-                                falseNegative.put(expectedLanguageKey, falseNegative.get(expectedLanguageKey) + 1);
-                            } else {
-                                falseNegative.put(expectedLanguageKey, 1);
-                            }
-                        }
+                        StatisticsUtils.updateStatistics(language, ngram, detectedLanguage, detectedCorretly);
                         return detectedCorretly;
-                    }).filter(v -> v).
-
-                            count();
+                    }).filter(v -> v).count();
             System.out.println(count + " / " + texts.size());
-            new
+        }
 
-                    Key(ngram, language);
+    }
+
+
+    Ngram(List<String> texts) {
+        for (int i = 2; i < 11; i++) {
+            System.out.println("i = " + i);
+            final int ngram = i;
+            Map<String, Map<String, Integer>> ngramCache = new HashMap<>();
+            ngramCache.put("english", calculateNgramMap(enlishInput, i));
+            ngramCache.put("finnish", calculateNgramMap(finnishInput, i));
+            ngramCache.put("german", calculateNgramMap(germanInput, i));
+            ngramCache.put("italian", calculateNgramMap(italianInput, i));
+            ngramCache.put("polish", calculateNgramMap(polishInput, i));
+            ngramCache.put("spanish", calculateNgramMap(spanishInput, i));
+
+
+            texts.forEach(text -> System.out.println("detected language: " + detectLanguage(ngram, text, ngramCache)));
         }
 
     }
@@ -73,12 +64,12 @@ public class Ngram {
         return ngramMap;
     }
 
-    private String calcAndPrintResult(int ngramSize, String text, Map<String, Map<String, Integer>> cacheNgramMap) {
+    private String detectLanguage(int ngramSize, String text, Map<String, Map<String, Integer>> cacheNgramMap) {
         Map<String, Integer> calculatedNgramMap = new HashMap<>();
         buildNgram(ngramSize, calculatedNgramMap, Stream.of(text));
 
         double best = 1;
-        String result = "";
+        String result = "language not detected";
 
         double englishMetric = calcCosMetric(calculatedNgramMap, cacheNgramMap.get("english"));
         if (englishMetric < best) {
@@ -138,143 +129,14 @@ public class Ngram {
             new Ngram(texts, "spanish");
             String[] languages = new String[]{"english", "finnish", "german", "italian", "polish", "spanish"};
             for(int i = 0; i < languages.length; i++) {
-                printStatisForPrecision(languages[i]);
-                printStatisForRecall(languages[i]);
-                printStatisForHarmonicMean(languages[i]);
-                printStatisForAccuracy(languages[i]);
+                StatisticsUtils.printStatisForPrecision(languages[i]);
+                StatisticsUtils.printStatisForRecall(languages[i]);
+                StatisticsUtils.printStatisForHarmonicMean(languages[i]);
+                StatisticsUtils.printStatisForAccuracy(languages[i]);
             }
         } else {
             String myText = "Przysiągłem smyk teraźniejsza chce Podniesionemi Zazdroszczono nikt Dąbrowskiego razu. Żytem leżą gonił Białopiotrowiczowi zginą";
-            new Ngram(Collections.singletonList(myText), "");
-        }
-    }
-
-    private static void printStatisForPrecision(String language) {
-        System.out.println(language + " precision:");
-        for (int i = 2; i < 11; i++) {
-            Key key = new Key(i, language);
-            double truePositives, falsePositives, precision;
-            if(truePositive.containsKey(key)) {
-                truePositives = Ngram.truePositive.get(key);
-            }
-            else {
-                truePositives = 0;
-            }
-            if(falsePositive.containsKey(key)){
-                falsePositives = Ngram.falsePositive.get(key);
-            }
-            else {
-                falsePositives = 0;
-            }
-            if(truePositives + falsePositives == 0){
-                precision = 0;
-            }
-            else {
-                precision = truePositives / (truePositives + falsePositives);
-            }
-            System.out.println(String.format("%f", precision));
-        }
-    }
-    private static void printStatisForRecall(String language) {
-        System.out.println(language + " Recall:");
-        for (int i = 2; i < 11; i++) {
-            Key key = new Key(i, language);
-            double truePositives, falseNegatives, recall;
-            if(truePositive.containsKey(key)) {
-                truePositives = Ngram.truePositive.get(key);
-            }
-            else {
-                truePositives = 0;
-            }
-            if(falseNegative.containsKey(key)) {
-                falseNegatives = Ngram.falseNegative.get(key);
-            }
-            else {
-                falseNegatives = 0;
-            }
-            if(truePositives + falseNegatives == 0){
-                recall = 0;
-            }else {
-                recall = truePositives / (truePositives + falseNegatives);
-            }
-            System.out.println(String.format("%f", recall));
-        }
-    }
-
-    private static void printStatisForHarmonicMean(String language) {
-        System.out.println(language + " HarmonicMean:");
-        for (int i = 2; i < 11; i++) {
-            Key key = new Key(i, language);
-            double truePositives, falsePositives, falseNegatives,precision, recall, sredniaHarmoniczna, accuracy;
-            if(truePositive.containsKey(key)) {
-                truePositives = Ngram.truePositive.get(key);
-            }
-            else {
-                truePositives = 0;
-            }
-            if(falsePositive.containsKey(key)){
-                falsePositives = Ngram.falsePositive.get(key);
-            }
-            else {
-                falsePositives = 0;
-            }
-            if(falseNegative.containsKey(key)) {
-                falseNegatives = Ngram.falseNegative.get(key);
-            }
-            else {
-                falseNegatives = 0;
-            }
-            if(truePositives + falseNegatives == 0){
-                precision = 0;
-            }
-            else {
-                precision = truePositives / (truePositives + falsePositives);
-            }
-            if(truePositives + falseNegatives == 0){
-                recall = 0;
-            }else {
-                recall = truePositives / (truePositives + falseNegatives);
-            }
-            if(precision + recall == 0){
-                sredniaHarmoniczna = 0;
-            }
-            else {
-                sredniaHarmoniczna = 2 * precision * recall / (precision + recall);
-            }
-            System.out.println(String.format("%f", sredniaHarmoniczna));
-        }
-    }
-
-    private static void printStatisForAccuracy(String language) {
-        System.out.println(language + " Accuracy:");
-        for (int i = 2; i < 11; i++) {
-            Key key = new Key(i, language);
-            double truePositives, falsePositives, falseNegatives, accuracy;
-            if(truePositive.containsKey(key)) {
-                truePositives = Ngram.truePositive.get(key);
-            }
-            else {
-                truePositives = 0;
-            }
-            if(falsePositive.containsKey(key)){
-                falsePositives = Ngram.falsePositive.get(key);
-            }
-            else {
-                falsePositives = 0;
-            }
-            if(falseNegative.containsKey(key)) {
-                falseNegatives = Ngram.falseNegative.get(key);
-            }
-            else {
-                falseNegatives = 0;
-            }
-            if(truePositives + falsePositives + falseNegatives == 0){
-                accuracy = 0;
-            }
-            else {
-                accuracy = truePositives / (truePositives + falsePositives + falseNegatives);
-            }
-            System.out.println(String.format("%f", accuracy));
+            new Ngram(Collections.singletonList(myText));
         }
     }
 
