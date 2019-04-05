@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,6 +38,16 @@ public class Ranking {
             }
         });
         writer.close();
+        Map<String, Integer> stringIntegerMap2 = readFileAndBuildNgram("lab2/odm.txt", 2);
+        Map<String, Integer> stringIntegerMap3 = readFileAndBuildNgram("lab2/odm.txt", 3);
+        stringIntegerMap2.entrySet().stream()
+                .sorted((e1, e2) -> Integer.compare(e2.getValue(), e1.getValue()))
+                .limit(100)
+                .forEach(e -> System.out.println(e.getKey() + " " + e.getValue()));
+        stringIntegerMap3.entrySet().stream()
+                .sorted((e1, e2) -> Integer.compare(e2.getValue(), e1.getValue()))
+                .limit(100)
+                .forEach(e -> System.out.println(e.getKey() + " " + e.getValue()));
     }
 
     private void readFileAndMapping(String fileName) {
@@ -64,8 +75,14 @@ public class Ranking {
         }
     }
 
-    private Map<String, Integer> readFileAndBuildNgram(){
-
+    private Map<String, Integer> readFileAndBuildNgram(String fileName, int ngramSize){
+        Map<String, Integer> map = new HashMap<>();
+        Stream<String> stringStream = readFile(fileName)
+                .map(line -> line.replaceAll("[^a-zA-Z ąĄćĆęĘłŁńŃóÓśŚźŹżŻ]", ""))
+                .map(line -> line.split(" "))
+                .flatMap(Arrays::stream);
+        buildNgram(ngramSize, map, stringStream);
+        return map;
     }
     private void buildNgram(int ngramSize, Map<String, Integer> ngramMap, Stream<String> lines) {
         lines.map(String::toLowerCase)
@@ -81,6 +98,15 @@ public class Ranking {
                         ngramMap.put(ngram, 1);
                     }
                 });
+    }
+
+
+    private List<String> splitWord(String word, int ngramSize) {
+        List<String> result = new LinkedList<>();
+        for (int i = 0; i + ngramSize < word.length(); i++) {
+            result.add(word.substring(i, i + ngramSize));
+        }
+        return result;
     }
 
     private List<Map.Entry<String, Long>> sort(){
