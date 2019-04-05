@@ -28,6 +28,7 @@ public class Ranking {
     public Ranking() throws IOException {
         System.out.println("yolo");
         readFileAndMapping("lab2/odm.txt");
+//        readFileAndCount("lab3/lines.txt");
         readFileAndCount("lab2/potop.txt");
         BufferedWriter writer = new BufferedWriter(new FileWriter("src/main/resources/lab2/potopWords.txt"));
         sort().stream().forEach(s -> {
@@ -38,16 +39,16 @@ public class Ranking {
             }
         });
         writer.close();
-        Map<String, Integer> stringIntegerMap2 = readFileAndBuildNgram("lab2/odm.txt", 2);
-        Map<String, Integer> stringIntegerMap3 = readFileAndBuildNgram("lab2/odm.txt", 3);
+        Map<String, Integer> stringIntegerMap2 = readFileAndBuildNgram("lab2/potop.txt", 2);
+        Map<String, Integer> stringIntegerMap3 = readFileAndBuildNgram("lab2/potop.txt", 3);
         stringIntegerMap2.entrySet().stream()
                 .sorted((e1, e2) -> Integer.compare(e2.getValue(), e1.getValue()))
                 .limit(100)
-                .forEach(e -> System.out.println(e.getKey() + " " + e.getValue()));
+                .forEach(e -> System.out.println(e.getKey() + ", " + e.getValue()));
         stringIntegerMap3.entrySet().stream()
                 .sorted((e1, e2) -> Integer.compare(e2.getValue(), e1.getValue()))
                 .limit(100)
-                .forEach(e -> System.out.println(e.getKey() + " " + e.getValue()));
+                .forEach(e -> System.out.println(e.getKey() + ", " + e.getValue()));
     }
 
     private void readFileAndMapping(String fileName) {
@@ -77,15 +78,30 @@ public class Ranking {
 
     private Map<String, Integer> readFileAndBuildNgram(String fileName, int ngramSize){
         Map<String, Integer> map = new HashMap<>();
-        Stream<String> stringStream = readFile(fileName)
+        List<String> stringStream = readFile(fileName)
                 .map(line -> line.replaceAll("[^a-zA-Z ąĄćĆęĘłŁńŃóÓśŚźŹżŻ]", ""))
+                .map(line -> line.toLowerCase())
                 .map(line -> line.split(" "))
-                .flatMap(Arrays::stream);
+                .flatMap(Arrays::stream)
+                .filter(s -> s.length()>1)
+                .collect(Collectors.toList());
+
         buildNgram(ngramSize, map, stringStream);
         return map;
     }
-    private void buildNgram(int ngramSize, Map<String, Integer> ngramMap, Stream<String> lines) {
-        lines.map(String::toLowerCase)
+    private void buildNgram(int ngramSize, Map<String, Integer> ngramMap, List<String> lines) {
+        for(int i = 0; i < lines.size() - ngramSize; i++){
+            String ngram = "";
+            for(int j = 0; j < ngramSize; j++){
+                ngram += " " + lines.get(i+j);
+            }
+            if (ngramMap.containsKey(ngram)) {
+                ngramMap.put(ngram, ngramMap.get(ngram) + 1);
+            } else {
+                ngramMap.put(ngram, 1);
+            }
+        }
+       /* lines.map(String::toLowerCase)
                 .map(line -> line.replaceAll("[^a-zA-Z ]", ""))
                 .map(line -> line.split(" "))
                 .flatMap(Arrays::stream)
@@ -97,7 +113,7 @@ public class Ranking {
                     } else {
                         ngramMap.put(ngram, 1);
                     }
-                });
+                });*/
     }
 
 
