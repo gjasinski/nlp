@@ -177,12 +177,62 @@ public class Cluster {
                 .map(String::toLowerCase)
                 .map(line -> Arrays.stream(line.split(" "))
                         .filter(this::isNotInStopList)
+                        .filter(s -> s.length() > 0)
                         .reduce("", (s1, s2) -> s1 += " " + s2))
-                .map(s -> s.replaceAll(" ", ""))
+//                .map(s -> s.replaceAll(" ", ""))
                 .sorted(alphabeticalOrderComparator)
                 .collect(Collectors.toList());
         clusterWithLevenshtein(lines);
-        return;
+        clusterWithLcs(lines);
+    }
+
+    private void clusterWithLcs(List<String> lines) throws IOException {
+        List<String> clusteredLinesHeaders = new LinkedList<>();
+        Map<String, List<String>> mapOfClusters = new HashMap<>();
+        createNewCluster(lines.get(0), clusteredLinesHeaders, mapOfClusters);
+        lines.stream()
+                .skip(1)
+                .forEach(s -> {
+                    int longestLcs = 0;
+                    String longestLcsString = "";
+                    for (String clusteredLinesHeader : clusteredLinesHeaders) {
+                        int distance = getLongestCommonSubsequence(s, clusteredLinesHeader);
+                        if (distance > longestLcs) {
+                            longestLcs = distance;
+                            longestLcsString = clusteredLinesHeader;
+                        }
+                    }
+                    if (longestLcs > 0.8 * s.length()) {
+                        List<String> strings = mapOfClusters.get(longestLcsString);
+                        strings.add(s);
+                        System.out.println(String.format("added %s to %s with distance %d", s, longestLcsString, longestLcs));
+                    } else {
+                        createNewCluster(s, clusteredLinesHeaders, mapOfClusters);
+                        System.out.println("Created new cluster: " + s);
+                    }
+                });
+
+        saveClusteredResults(mapOfClusters, "lcs.txt");
+    }
+
+    public int getLongestCommonSubsequence(String a, String b) {
+        int m = a.length();
+        int n = b.length();
+        int[][] dp = new int[m + 1][n + 1];
+
+        for (int i = 0; i <= m; i++) {
+            for (int j = 0; j <= n; j++) {
+                if (i == 0 || j == 0) {
+                    dp[i][j] = 0;
+                } else if (a.charAt(i - 1) == b.charAt(j - 1)) {
+                    dp[i][j] = 1 + dp[i - 1][j - 1];
+                } else {
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                }
+            }
+        }
+
+        return dp[m][n];
     }
 
     private void clusterWithLevenshtein(List<String> lines) throws IOException {
@@ -209,11 +259,29 @@ public class Cluster {
                     }
                 });
 
-        BufferedWriter writer = new BufferedWriter(new FileWriter("src/main/resources/lab3/levenstainMetric.txt"));
-        mapOfClusters.forEach((k, v) -> {
-            System.out.println("=======================");
-            v.forEach(System.out::println);
-        });
+        saveClusteredResults(mapOfClusters, "levenshtein.txt");
+    }
+
+    private void saveClusteredResults(Map<String, List<String>> mapOfClusters, String filename) throws IOException {
+        BufferedWriter writer = new BufferedWriter(new FileWriter("src/main/resources/lab3/" + filename));
+        mapOfClusters.entrySet().stream()
+                .sorted((e1, e2) -> alphabeticalOrderComparator.compare(e1.getKey(), e2.getKey()))
+                .forEach((e) -> {
+                    System.out.println("##########");
+                    try {
+                        writer.write("##########\n");
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                    e.getValue().forEach(System.out::println);
+                    e.getValue().forEach(k -> {
+                        try {
+                            writer.write(k+"\n");
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+                    });
+                });
         writer.close();
     }
 
