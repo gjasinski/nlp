@@ -29,7 +29,7 @@ public class Ranking {
         System.out.println("yolo");
         readFileAndMapping("lab2/odm.txt");
 //        readFileAndCount("lab3/lines.txt");
-        readFileAndCount("lab2/potop.txt");
+        readFileAndCount("lab3/lines.txt");
         BufferedWriter writer = new BufferedWriter(new FileWriter("src/main/resources/lab2/potopWords.txt"));
         sort().stream().forEach(s -> {
             try {
@@ -39,7 +39,7 @@ public class Ranking {
             }
         });
         writer.close();
-        Map<String, Integer> stringIntegerMap2 = readFileAndBuildNgram("lab2/potop.txt", 2);
+       /* Map<String, Integer> stringIntegerMap2 = readFileAndBuildNgram("lab2/potop.txt", 2);
         Map<String, Integer> stringIntegerMap3 = readFileAndBuildNgram("lab2/potop.txt", 3);
         stringIntegerMap2.entrySet().stream()
                 .sorted((e1, e2) -> Integer.compare(e2.getValue(), e1.getValue()))
@@ -48,7 +48,7 @@ public class Ranking {
         stringIntegerMap3.entrySet().stream()
                 .sorted((e1, e2) -> Integer.compare(e2.getValue(), e1.getValue()))
                 .limit(100)
-                .forEach(e -> System.out.println(e.getKey() + ", " + e.getValue()));
+                .forEach(e -> System.out.println(e.getKey() + ", " + e.getValue()));*/
     }
 
     private void readFileAndMapping(String fileName) {

@@ -8,7 +8,18 @@ import java.util.Arrays;
 import java.util.stream.Stream;
 
 public class Cluster {
-    private String[] stopList = new String[]{"tel",
+    private String[] stopList = new String[]{
+            "limited",
+            "str",
+            "f",
+            "building",
+            "international",
+            "oo",
+            "oy",
+            "end",
+            "as",
+
+            "tel",
             "ltd",
             "fax",
             "road",
