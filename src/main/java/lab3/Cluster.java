@@ -20,6 +20,7 @@ public class Cluster {
     private String[] stopList = new String[]{
             "limited",
             "str",
+            "str",
             "f",
             "building",
             "international",
@@ -112,6 +113,7 @@ public class Cluster {
             "north",
             "contact",
             "email",
+            "mail",
             "unit",
             "new",
             "ocean",
@@ -156,12 +158,6 @@ public class Cluster {
             "suite"
 
     };
-    //"'.,()
-
-    ///prawdopobienstwo ze napisalem w pod warunkiem ze chciałem napisać c
-    //tw bayesa - będą dominowały najbardziej popularne elemtnty, trzeba wprowadzic wagi
-
-    //lewentine i lcs
 
     public static void main(String[] args) throws IOException {
         new Cluster();
@@ -172,43 +168,44 @@ public class Cluster {
     }
 
     private void readFileAndRemoveFromStopList(String fileName) throws IOException {
-        List<String> lines = readFile(fileName)
-                .map(line -> line.replaceAll("[^a-zA-Z ąĄćĆęĘłŁńŃóÓśŚźŹżŻ]", " "))
-                .map(String::toLowerCase)
-                .map(line -> Arrays.stream(line.split(" "))
+        List<Tuple<String, String>> lines = readFile(fileName)
+                .map(line -> new Tuple<>(line, line))
+                .peek(tuple -> tuple.setKey(tuple.getKey().replaceAll("[^a-zA-Z ąĄćĆęĘłŁńŃóÓśŚźŹżŻ]", "")))
+                .peek(tuple -> tuple.setKey((tuple.getKey().toLowerCase())))
+                .peek(tuple -> tuple.setKey(Arrays.stream(tuple.getKey().split(" "))
                         .filter(this::isNotInStopList)
                         .filter(s -> s.length() > 0)
-                        .reduce("", (s1, s2) -> s1 += " " + s2))
+                        .reduce("", (s1, s2) -> s1 += " " + s2)))
 //                .map(s -> s.replaceAll(" ", ""))
-                .sorted(alphabeticalOrderComparator)
+                .sorted((t1, t2) -> alphabeticalOrderComparator.compare(t1.getKey(), t2.getKey()))
                 .collect(Collectors.toList());
         clusterWithLevenshtein(lines);
         clusterWithLcs(lines);
     }
 
-    private void clusterWithLcs(List<String> lines) throws IOException {
+    private void clusterWithLcs(List<Tuple<String, String>> tupleList) throws IOException {
         List<String> clusteredLinesHeaders = new LinkedList<>();
         Map<String, List<String>> mapOfClusters = new HashMap<>();
-        createNewCluster(lines.get(0), clusteredLinesHeaders, mapOfClusters);
-        lines.stream()
+        createNewCluster(tupleList.get(0), clusteredLinesHeaders, mapOfClusters);
+        tupleList.stream()
                 .skip(1)
-                .forEach(s -> {
+                .forEach(tuple -> {
                     int longestLcs = 0;
                     String longestLcsString = "";
                     for (String clusteredLinesHeader : clusteredLinesHeaders) {
-                        int distance = getLongestCommonSubsequence(s, clusteredLinesHeader);
+                        int distance = getLongestCommonSubsequence(tuple.getKey(), clusteredLinesHeader);
                         if (distance > longestLcs) {
                             longestLcs = distance;
                             longestLcsString = clusteredLinesHeader;
                         }
                     }
-                    if (longestLcs > 0.8 * s.length()) {
+                    if (longestLcs > 0.8 * tuple.getKey().length()) {
                         List<String> strings = mapOfClusters.get(longestLcsString);
-                        strings.add(s);
-                        System.out.println(String.format("added %s to %s with distance %d", s, longestLcsString, longestLcs));
+                        strings.add(tuple.getValue());
+                        System.out.println(String.format("added %s to %s with distance %d", tuple, longestLcsString, longestLcs));
                     } else {
-                        createNewCluster(s, clusteredLinesHeaders, mapOfClusters);
-                        System.out.println("Created new cluster: " + s);
+                        createNewCluster(tuple, clusteredLinesHeaders, mapOfClusters);
+                        System.out.println("Created new cluster: " + tuple);
                     }
                 });
 
@@ -235,27 +232,27 @@ public class Cluster {
         return dp[m][n];
     }
 
-    private void clusterWithLevenshtein(List<String> lines) throws IOException {
+    private void clusterWithLevenshtein(List<Tuple<String, String>> tupleList) throws IOException {
         List<String> clusteredLinesHeaders = new LinkedList<>();
         Map<String, List<String>> mapOfClusters = new HashMap<>();
-        createNewCluster(lines.get(0), clusteredLinesHeaders, mapOfClusters);
-        lines.stream()
+        createNewCluster(tupleList.get(0), clusteredLinesHeaders, mapOfClusters);
+        tupleList.stream()
                 .skip(1)
-                .forEach(s -> {
+                .forEach(tuple -> {
                     boolean added = false;
                     for (String clusteredLinesHeader : clusteredLinesHeaders) {
-                        int distance = computeLevenshteinDistance(s, clusteredLinesHeader);
-                        if (distance < 10) {
+                        int distance = computeLevenshteinDistance(tuple.getKey(), clusteredLinesHeader);
+                        if (distance < 21) {//10 - 4369 13-4131 15- 3975 17-3795 19-3586 20-3470
                             List<String> strings = mapOfClusters.get(clusteredLinesHeader);
-                            strings.add(s);
+                            strings.add(tuple.getValue());
                             added = true;
-                            System.out.println(String.format("added %s to %s with distance %d", s, clusteredLinesHeader, distance));
+                            System.out.println(String.format("added %s to %s with distance %d", tuple, clusteredLinesHeader, distance));
                             break;
                         }
                     }
                     if (!added) {
-                        createNewCluster(s, clusteredLinesHeaders, mapOfClusters);
-                        System.out.println("Created new cluster: " + s);
+                        createNewCluster(tuple, clusteredLinesHeaders, mapOfClusters);
+                        System.out.println("Created new cluster: " + tuple);
                     }
                 });
 
@@ -276,7 +273,7 @@ public class Cluster {
                     e.getValue().forEach(System.out::println);
                     e.getValue().forEach(k -> {
                         try {
-                            writer.write(k+"\n");
+                            writer.write(k + "\n");
                         } catch (IOException ex) {
                             ex.printStackTrace();
                         }
@@ -285,11 +282,11 @@ public class Cluster {
         writer.close();
     }
 
-    private void createNewCluster(String line, List<String> clusteredLinesHeaders, Map<String, List<String>> mapOfClusters) {
-        clusteredLinesHeaders.add(0, line);
+    private void createNewCluster(Tuple<String, String> tuple, List<String> clusteredLinesHeaders, Map<String, List<String>> mapOfClusters) {
+        clusteredLinesHeaders.add(0, tuple.getKey());
         LinkedList<String> cluster = new LinkedList<>();
-        cluster.add(line);
-        mapOfClusters.put(line, cluster);
+        cluster.add(tuple.getValue());
+        mapOfClusters.put(tuple.getKey(), cluster);
     }
 
     private Comparator<String> alphabeticalOrderComparator = (str1, str2) -> {
