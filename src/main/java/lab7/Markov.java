@@ -16,43 +16,61 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Markov {
-    public static int SIZE = 1;
+  //  public static int SIZE = 1;
 
     public static void main(String[] args) throws IOException {
-        Map<String, Map<String, Map<String, Integer>>> authorToMarkovModel = new HashMap<>();
-        try (Stream<Path> paths = Files.walk(Paths.get("C:\\git\\grzegorz\\nlp\\src\\main\\resources\\lab7"))) {
-            paths
-                    .filter(Files::isRegularFile)
-                    .filter(path -> path.getFileName().toString().contains("-"))
-                    .peek(path -> {
-                        try {
-                            Map<String, Map<String, Integer>> markovModel;
+//        Map<String, Map<String, Map<String, Integer>>> authorToMarkovModel = new HashMap<>();
+        for (int i = 2; i < 11; i++) {
+            final int SIZE = i;
+            Map<String, Integer> counter = new HashMap<>();
+            try (Stream<Path> paths = Files.walk(Paths.get("/home/grzegorz/git/nlp/src/main/resources/lab7/"))) {
+                paths
+                        .filter(Files::isRegularFile)
+                        .filter(path -> path.getFileName().toString().contains("-"))
+                        .peek(path -> {
                             String file = path.getFileName().toString();
                             String author = file.substring(0, file.indexOf("-")).replaceAll("_", "");
-                            try {
-                                ObjectInputStream oin = new ObjectInputStream(new FileInputStream(author + ".ser"));
-                                markovModel = (Map) oin.readObject();
-                            } catch (Exception ex) {
-                                System.out.println(ex.toString());
-                                markovModel = new HashMap<>();
-                                System.out.println("ERROR - tworze nową mapkę");
-                            }
-                            /*if (!authorToMarkovModel.containsKey(author)) {
-                                markovModel = new HashMap<>();
-                                authorToMarkovModel.put(author, markovModel);
+                            if (counter.containsKey(author)) {
+                                counter.put(author, counter.get(author) + 1);
                             } else {
-                                markovModel = authorToMarkovModel.get(author);
-                            }*/
-                            markovForFile(markovModel, path.toAbsolutePath().toString(), SIZE);
-                            System.out.println(file);
-                            ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(author + ".ser"));
-                            out.writeObject(markovModel);
-                            out.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    })
-                    .forEach(System.out::println);
+                                counter.put(author, 1);
+                            }
+                        })
+                        .filter(path -> {
+                            String file = path.getFileName().toString();
+                            String author = file.substring(0, file.indexOf("-")).replaceAll("_", "");
+                            return counter.get(author) > 3;
+                        })
+                        .peek(path -> {
+                            String file = path.getFileName().toString();
+                            String author = file.substring(0, file.indexOf("-")).replaceAll("_", "");
+                            System.out.println(author);
+                        })
+                        .peek(path -> {
+                            try {
+                                Map<String, Map<String, Integer>> markovModel;
+                                String file = path.getFileName().toString();
+                                String author = file.substring(0, file.indexOf("-")).replaceAll("_", "");
+                                try {
+                                    ObjectInputStream oin = new ObjectInputStream(new FileInputStream("/home/grzegorz/git/nlp/src/main/resources/lab7_out/" + SIZE  + "/" + author + ".ser"));
+                                    markovModel = (Map) oin.readObject();
+                                    System.out.println("Map size: " + markovModel.size());
+                                } catch (Exception ex) {
+                                    //System.out.println(ex.toString());
+                                    markovModel = new HashMap<>();
+                                    //System.out.println("ERROR - tworze nową mapkę");
+                                }
+                                markovForFile(markovModel, path.toAbsolutePath().toString(), SIZE);
+                                System.out.println(file);
+                                ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("/home/grzegorz/git/nlp/src/main/resources/lab7_out/" + SIZE  + "/" + author + ".ser"));
+                                out.writeObject(markovModel);
+                                out.close();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        })
+                        .forEach(System.out::println);
+            }
         }
     }
 
